@@ -57,7 +57,6 @@ namespace LiteDB
             });
         }
 
-
         /// <summary>
         /// Enter in Reserved lock mode.
         /// </summary>
@@ -89,48 +88,49 @@ namespace LiteDB
 
         /// <summary>
         /// Try enter in shared lock (read) - Call action if request a new lock
+        /// [Non ThreadSafe]
         /// </summary>
         private Action LockShared()
         {
-            lock (_disk)
+            lock(_disk)
             {
                 if (_state != LockState.Unlocked) return () => { };
-
-                _log.Write(Logger.DISK, "enter in shared lock mode");
 
                 _disk.Lock(LockState.Shared, _timeout);
 
                 _state = LockState.Shared;
                 _shared = true;
 
+                _log.Write(Logger.LOCK, "entered in shared lock mode");
+
                 this.AvoidDirtyRead();
 
                 return () =>
                 {
-                    _log.Write(Logger.DISK, "exit shared lock mode");
-
                     _shared = false;
+                    _disk.Unlock(LockState.Shared);
                     _state = LockState.Unlocked;
 
-                    _disk.Unlock(LockState.Shared);
+                    _log.Write(Logger.LOCK, "exited shared lock mode");
                 };
             }
         }
 
         /// <summary>
         /// Try enter in reserved mode (read - single reserved)
+        /// [ThreadSafe] (always inside an Write())
         /// </summary>
         private Action LockReserved()
         {
-            lock (_disk)
+            lock(_disk)
             {
                 if (_state == LockState.Reserved) return () => { };
-
-                _log.Write(Logger.DISK, "enter in reserved lock mode");
 
                 _disk.Lock(LockState.Reserved, _timeout);
 
                 _state = LockState.Reserved;
+
+                _log.Write(Logger.LOCK, "entered in reserved lock mode");
 
                 // can be a new lock, calls action to notifify
                 if (!_shared)
@@ -141,16 +141,18 @@ namespace LiteDB
                 // is new lock only when not came from a shared lock
                 return () =>
                 {
-                    _log.Write(Logger.DISK, "exit in reserved lock mode");
+                    _disk.Unlock(LockState.Reserved);
 
                     _state = _shared ? LockState.Shared : LockState.Unlocked;
-                    _disk.Unlock(LockState.Reserved);
+
+                    _log.Write(Logger.LOCK, "exited reserved lock mode");
                 };
             }
         }
 
         /// <summary>
         /// Try enter in exclusive mode (single write)
+        /// [ThreadSafe] - always inside Reserved() -> Write() 
         /// </summary>
         private Action LockExclusive()
         {
@@ -164,21 +166,25 @@ namespace LiteDB
                     _disk.Unlock(LockState.Shared);
                 }
 
-                _log.Write(Logger.DISK, "enter in exclusive lock mode");
-
                 _disk.Lock(LockState.Exclusive, _timeout);
+
                 _state = LockState.Exclusive;
+
+                _log.Write(Logger.LOCK, "entered in exclusive lock mode");
 
                 return () =>
                 {
-                    _log.Write(Logger.DISK, "exit in exclusive lock mode");
-                    _state = LockState.Reserved;
                     _disk.Unlock(LockState.Exclusive);
+                    _state = LockState.Reserved;
+
+                    _log.Write(Logger.LOCK, "exited exclusive lock mode");
 
                     // if was in a shared lock before exclusive lock, back to shared again (still reserved lock)
                     if (_shared)
                     {
                         _disk.Lock(LockState.Shared, _timeout);
+
+                        _log.Write(Logger.LOCK, "backed to shared mode");
                     }
                 };
             }
@@ -229,13 +235,14 @@ namespace LiteDB
             _thread.TryEnterWriteLock(_timeout);
 
             // and release when dispose
-            return _thread.ExitWriteLock;
+            return () => _thread.ExitWriteLock();
         }
 
         #endregion
 
         /// <summary>
         /// Test if cache still valid (if datafile was changed by another process reset cache)
+        /// [Thread Safe]
         /// </summary>
         private void AvoidDirtyRead()
         {
@@ -257,7 +264,7 @@ namespace LiteDB
             // if header change, clear cache and add new header to cache
             if (disk.ChangeID != changeID)
             {
-                _log.Write(Logger.CACHE, "file changed from another process");
+                _log.Write(Logger.CACHE, "file changed from another process, cleaning all cache pages");
 
                 _cache.ClearPages();
                 _cache.AddPage(disk);

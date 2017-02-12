@@ -18,7 +18,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\net35\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NET35 UNITY3D</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NET35</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
@@ -32,7 +32,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\net35\</OutputPath>
-    <DefineConstants>TRACE;NET35</DefineConstants>
+    <DefineConstants>TRACE;NET35;UNITY3D</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -40,7 +40,7 @@
     <DocumentationFile>bin\Release\net35\LiteDB.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>false</SignAssembly>
+    <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
     <AssemblyOriginatorKeyFile>LiteDB.snk</AssemblyOriginatorKeyFile>
@@ -110,9 +110,9 @@
     <Compile Include="Engine\Structures\DataBlock.cs" />
     <Compile Include="Engine\Structures\IndexNode.cs" />
     <Compile Include="Engine\Structures\IndexInfo.cs" />
-    <Compile Include="Mapper\Reflection\Reflection.Unity3D.cs" />
     <Compile Include="Mapper\Reflection\Reflection.Expression.cs" />
     <Compile Include="Mapper\Reflection\Reflection.Emit.cs" />
+    <Compile Include="Mapper\Reflection\Reflection.Unity3D.cs" />
     <Compile Include="Utils\LockControl.cs" />
     <Compile Include="Utils\LockState.cs" />
     <Compile Include="Mapper\Attributes\BsonRefAttribute.cs" />

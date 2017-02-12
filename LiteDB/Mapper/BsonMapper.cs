@@ -116,19 +116,19 @@ namespace LiteDB
             #region Register AutoId
 
             // register AutoId for ObjectId, Guid and Int32
-            RegisterAutoId
+            RegisterAutoId<ObjectId>
             (
                 value => value.Equals(ObjectId.Empty),
                 (db, col) => ObjectId.NewObjectId()
             );
 
-            RegisterAutoId
+            RegisterAutoId<Guid>
             (
                 value => value == Guid.Empty,
                 (db, col) => Guid.NewGuid()
             );
 
-            RegisterAutoId
+            RegisterAutoId<int>
             (
                 value => value == 0,
                 (db, col) =>
