@@ -31,7 +31,7 @@ namespace LiteDB
         private Logger _log; // will be initialize in "Initialize()"
         private FileOptions _options;
 
-#if NET35
+#if USE_FILE_LOCK
         private int _lockSharedPosition = 0;
         private Random _lockSharedRandom = new Random();
 #endif
@@ -222,6 +222,11 @@ namespace LiteDB
             }
 
             // journal file will be unlocked only in ClearJournal
+
+            _log.Write(Logger.JOURNAL, "flush journal to disk");
+
+            // ensure all data are persisted in disk
+            _journal.Flush();
         }
 
         /// <summary>
@@ -305,7 +310,7 @@ namespace LiteDB
         /// </summary>
         public void Lock(LockState state, TimeSpan timeout)
         {
-#if NET35
+#if USE_FILE_LOCK
             // only shared mode lock datafile
             if (_options.FileMode != FileMode.Shared) return;
 
@@ -327,7 +332,7 @@ namespace LiteDB
         /// </summary>
         public void Unlock(LockState state)
         {
-#if NET35
+#if USE_FILE_LOCK
             // only shared mode lock datafile
             if (_options.FileMode != FileMode.Shared) return;
 

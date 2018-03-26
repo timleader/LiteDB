@@ -17,15 +17,17 @@ namespace LiteDB
             this.Journal = true;
             this.InitialSize = BasePage.PAGE_SIZE;
             this.LimitSize = long.MaxValue;
-#if NET35
+#if USE_FILE_LOCK
             this.FileMode = FileMode.Shared;
+#else 
+            this.FileMode = FileMode.Exclusive;
 #endif
         }
     }
 
     public enum FileMode
     {
-#if NET35
+#if USE_FILE_LOCK
         Shared,
 #endif
         Exclusive,

@@ -37,7 +37,7 @@ namespace LiteDB
         {
             try
             {
-#if NET35
+#if USE_FILE_LOCK
                 stream.Unlock(position, length);
 #endif
                 return true;
@@ -55,7 +55,7 @@ namespace LiteDB
         {
             FileHelper.TryExec(() =>
             {
-#if NET35
+#if USE_FILE_LOCK
                 stream.Lock(position, length);
 #endif
             }, timeout);
