@@ -45,6 +45,15 @@ namespace LiteDB
                     _cache.AddPage(page);
                 }
 
+                if ((page is T) == false)
+                {
+                    throw new InvalidCastException(
+                        string.Format(
+                            "Unable to cast object of type '{0}' to type '{1}'.",
+                            page.GetType().Name,
+                            typeof(T).Name));
+                }
+
                 return (T)page;
             }
         }
