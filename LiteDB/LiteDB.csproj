@@ -40,10 +40,11 @@
     <DocumentationFile>bin\Release\net35\LiteDB.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>LiteDB.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -189,9 +190,6 @@
     <Compile Include="Utils\LiteException.cs" />
     <Compile Include="Utils\Logger.cs" />
     <Compile Include="Utils\StringScanner.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="LiteDB.snk" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
