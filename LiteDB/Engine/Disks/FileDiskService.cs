@@ -31,6 +31,8 @@ namespace LiteDB
         private Logger _log; // will be initialize in "Initialize()"
         private FileOptions _options;
 
+        private string _password;
+
 #if USE_FILE_LOCK
         private int _lockSharedPosition = 0;
         private Random _lockSharedRandom = new Random();
@@ -61,6 +63,8 @@ namespace LiteDB
         {
             // get log instance to disk
             _log = log;
+
+            _password = password;
 
             // if is read only, journal must be disabled
             if (_options.FileMode == FileMode.ReadOnly) _options.Journal = false;
@@ -185,6 +189,42 @@ namespace LiteDB
             _log.Write(Logger.DISK, "flush data from memory to disk");
 
             _stream.Flush();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Reset()
+        {
+            SetLength(0);
+
+            // flush all data direct to disk
+            Flush();
+
+            // discard journal file
+            ClearJournal();
+
+            _log.Write(Logger.DISK, "initialize new datafile");
+
+            // set datafile initial size
+            _stream.SetLength(_options.InitialSize);
+
+            // create a new header page in bytes (keep second page empty)
+            var header = new HeaderPage() { LastPageID = 1 };
+
+            if (_password != null)
+            {
+                _log.Write(Logger.DISK, "datafile encrypted");
+
+                header.Password = AesEncryption.HashSHA1(_password);
+                header.Salt = AesEncryption.Salt();
+            }
+
+            // write bytes on page
+            this.WritePage(0, header.WritePage());
+
+            // write second page empty just to use as lock control
+            this.WritePage(1, new byte[BasePage.PAGE_SIZE]);
         }
 
         #endregion

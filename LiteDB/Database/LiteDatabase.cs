@@ -229,6 +229,15 @@ namespace LiteDB
 
         #endregion
 
+        #region Reset
+
+        public void Reset()
+        {
+            _engine.Value.Reset();
+        }
+
+        #endregion
+
         #region Integrity
 
         public bool IntegrityCheck()

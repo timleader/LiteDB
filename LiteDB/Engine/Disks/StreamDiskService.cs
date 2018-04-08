@@ -19,6 +19,8 @@ namespace LiteDB
         private Stream _stream;
         private Logger _log; // will be initialize in "Initialize()"
 
+        private string _password;
+
         #region Initialize disk
 
         public StreamDiskService(Stream stream)
@@ -30,6 +32,8 @@ namespace LiteDB
         {
             // get log instance to disk
             _log = log;
+
+            _password = password;
 
             // if stream are empty, create header page and save to stream
             if (_stream.Length == 0)
@@ -121,6 +125,36 @@ namespace LiteDB
         public void Flush()
         {
             _stream.Flush();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public void Reset()
+        {
+            SetLength(0);
+
+            // flush all data direct to disk
+            Flush();
+
+            // discard journal file
+            ClearJournal();
+
+            _log.Write(Logger.DISK, "initialize new datafile");
+
+            // create a new header page in bytes
+            var header = new HeaderPage();
+
+            if (_password != null)
+            {
+                _log.Write(Logger.DISK, "datafile encrypted");
+
+                header.Password = AesEncryption.HashSHA1(_password);
+                header.Salt = AesEncryption.Salt();
+            }
+
+            // write bytes on page
+            this.WritePage(0, header.WritePage());
         }
 
         #endregion

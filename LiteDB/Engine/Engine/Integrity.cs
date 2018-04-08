@@ -49,6 +49,9 @@ namespace LiteDB
                         var dataPage = _pager.GetPage<DataPage>(node.DataBlock.PageID);
                         foreach (var extend in dataPage.DataBlocks.Values)
                         {
+                            if (extend.ExtendPageID == uint.MaxValue)
+                                continue;
+
                             result &= _pager.ValidPage<ExtendPage>(extend.ExtendPageID);
 
                             if (!result)

@@ -37,6 +37,11 @@ namespace LiteDB
         void Flush();
 
         /// <summary>
+        /// 
+        /// </summary>
+        void Reset();
+
+        /// <summary>
         /// Indicate that disk/instance are data access exclusive (no other process can access)
         /// </summary>
         bool IsExclusive { get; }
