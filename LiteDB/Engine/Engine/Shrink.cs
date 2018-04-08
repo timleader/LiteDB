@@ -1,6 +1,7 @@
-﻿using System;
+﻿
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace LiteDB
 {
@@ -42,13 +43,27 @@ namespace LiteDB
                 // read new header page to start copy
                 var header = BasePage.ReadPage(temp.ReadPage(0)) as HeaderPage;
 
+                var pages = new List<byte[]>();
+                // copy (as is) all pages from temp disk to original disk journal
+                for (uint i = 0; i <= header.LastPageID; i++)
+                {
+                    pages.Add(temp.ReadPage(i));
+                    _disk.WriteJournal(pages);
+                    pages.Clear();
+                }
+
                 // copy (as is) all pages from temp disk to original disk
                 for (uint i = 0; i <= header.LastPageID; i++)
                 {
                     var page = temp.ReadPage(i);
-
                     _disk.WritePage(i, page);
                 }
+
+                // flush all data direct to disk
+                _disk.Flush();
+
+                // discard journal file
+                _disk.ClearJournal();
 
                 // create/destroy crypto class
                 _crypto = password == null ? null : new AesEncryption(password, header.Salt);

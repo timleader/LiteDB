@@ -177,6 +177,16 @@ namespace LiteDB
         /// </summary>
         public long FileLength { get { return _stream.Length; } }
 
+        /// <summary>
+        /// Flush data from memory to disk
+        /// </summary>
+        public void Flush()
+        {
+            _log.Write(Logger.DISK, "flush data from memory to disk");
+
+            _stream.Flush();
+        }
+
         #endregion
 
         #region Journal file
@@ -293,6 +303,7 @@ namespace LiteDB
                 _journal.TryUnlock(0, 1);
                 _journal.Seek(0, SeekOrigin.Begin);
                 _journal.SetLength(0);
+                _journal.Flush();
             }
         }
 

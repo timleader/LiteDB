@@ -115,6 +115,14 @@ namespace LiteDB
         /// </summary>
         public long FileLength { get { return _stream.Length; } }
 
+        /// <summary>
+        /// No flush implemented
+        /// </summary>
+        public void Flush()
+        {
+            _stream.Flush();
+        }
+
         #endregion
 
         #region Not implemented in Stream

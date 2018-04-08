@@ -32,6 +32,11 @@ namespace LiteDB
         long FileLength { get; }
 
         /// <summary>
+        /// Ensures all pages from the OS cache are persisted on medium
+        /// </summary>
+        void Flush();
+
+        /// <summary>
         /// Indicate that disk/instance are data access exclusive (no other process can access)
         /// </summary>
         bool IsExclusive { get; }

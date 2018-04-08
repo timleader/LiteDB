@@ -20,6 +20,33 @@ namespace LiteDB
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="pageID"></param>
+        /// <returns></returns>
+        public bool ValidPage<T>(uint pageID)
+            where T : BasePage
+        {
+            lock (_disk)
+            {
+                var buffer = _disk.ReadPage(pageID);
+
+                // if datafile are encrypted, decrypt buffer (header are not encrypted)
+                if (_crypto != null && pageID > 0)
+                {
+                    buffer = _crypto.Decrypt(buffer);
+                }
+
+                var page = BasePage.ReadPage(buffer);
+
+                _cache.AddPage(page);
+                
+                return page is T;
+            }
+        }
+
+        /// <summary>
         /// Get a page from cache or from disk (get from cache or from disk)
         /// </summary>
         public T GetPage<T>(uint pageID)

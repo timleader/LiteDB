@@ -229,6 +229,15 @@ namespace LiteDB
 
         #endregion
 
+        #region Integrity
+
+        public bool IntegrityCheck()
+        {
+            return _engine.Value.IntegrityCheck();
+        }
+
+        #endregion
+
         public void Dispose()
         {
             if (_engine.IsValueCreated) _engine.Value.Dispose();
