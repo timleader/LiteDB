@@ -24,7 +24,7 @@ namespace LiteDB.TestProgram
 
         static void Main(string[] args)
         {
-            DB = new LiteDatabase("username_2.db");
+            DB = new LiteDatabase("username_0.db");
 
             var integrity = DB.IntegrityCheck();
 

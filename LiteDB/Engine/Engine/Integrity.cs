@@ -11,22 +11,18 @@ namespace LiteDB
         public bool IntegrityCheck()
         {
             bool result = true;
-            var lProcessedPages = new HashSet<uint>();
 
             try
             {
                 HeaderPage headerPage;
                 if (!GetValidPage(0, out headerPage))
                     return false;
-
-                lProcessedPages.Add(0);
-
+                
                 foreach (var pageID in headerPage.CollectionPages.Values)
                 {
                     CollectionPage collisionPage;
                     if (!GetValidPage(pageID, out collisionPage))
                         return false;
-                    lProcessedPages.Add(pageID);
                     
                     for (var i = 0; i < collisionPage.Indexes.Length; i++)
                     {
@@ -37,30 +33,22 @@ namespace LiteDB
                         IndexPage indexPage;
                         if (!GetValidPage(collectionIndex.HeadNode.PageID, out indexPage))
                             return false;
-
-                        lProcessedPages.Add(collectionIndex.HeadNode.PageID);
-
-                        for (;;)
+                        
+                        var indexNode = indexPage.Nodes[0];
+                        
+                        while (!indexNode.NextPrev(0, 1).IsEmpty)
                         {
-                            //if (indexPage.PrevPageID != uint.MaxValue)
-                            //   throw new Exception();
+                            if (!GetValidPage(indexNode.NextPrev(0, 1).PageID, out indexPage))
+                                return false;
+                            
+                            indexNode = indexPage.Nodes[indexNode.NextPrev(0, 1).Index];
 
-
-                            foreach (var indexNode in indexPage.Nodes.Values)
+                            if (!indexNode.DataBlock.IsEmpty)
                             {
-                                // indexNode.NextNode / PrevNode
-
-                                // 
-
-                                if (indexNode.DataBlock.IsEmpty)
-                                    continue;
-
                                 DataPage dataPage;
                                 if (!GetValidPage(indexNode.DataBlock.PageID, out dataPage))
                                     return false;
-
-                                lProcessedPages.Add(indexNode.DataBlock.PageID);
-
+                                
                                 foreach (var extend in dataPage.DataBlocks.Values)
                                 {
                                     if (extend.ExtendPageID == uint.MaxValue)
@@ -68,22 +56,11 @@ namespace LiteDB
 
                                     if (!_pager.ValidPage<ExtendPage>(extend.ExtendPageID))
                                         return false;
-
-                                    lProcessedPages.Add(extend.ExtendPageID);
                                 }
                             }
 
-                            if (indexPage.NextPageID == uint.MaxValue)
+                            if (indexNode.IsHeadTail(collectionIndex))
                                 break;
-
-                            {
-                                uint nextPageID = indexPage.NextPageID;
-
-                                if (!GetValidPage(nextPageID, out indexPage))
-                                    return false;
-
-                                lProcessedPages.Add(nextPageID);
-                            }
                         }
                     }
                 }
@@ -92,7 +69,7 @@ namespace LiteDB
             {
                 result = false;
             }
-
+            
             return result;
         }
 
