@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 
 namespace LiteDB
 {
@@ -10,57 +11,78 @@ namespace LiteDB
         public bool IntegrityCheck()
         {
             bool result = true;
+            var lProcessedPages = new HashSet<uint>();
+
             try
             {
-                result &= _pager.ValidPage<HeaderPage>(0);
+                HeaderPage headerPage;
+                if (!GetValidPage(0, out headerPage))
+                    return false;
 
-                if (!result)
-                    return result;
+                lProcessedPages.Add(0);
 
-                var headerPage = _pager.GetPage<HeaderPage>(0);
                 foreach (var pageID in headerPage.CollectionPages.Values)
                 {
-                    result &= _pager.ValidPage<CollectionPage>(pageID);
-
-                    if (!result)
-                        return result;
-
-                    var collisionPage = _pager.GetPage<CollectionPage>(pageID);
+                    CollectionPage collisionPage;
+                    if (!GetValidPage(pageID, out collisionPage))
+                        return false;
+                    lProcessedPages.Add(pageID);
+                    
                     for (var i = 0; i < collisionPage.Indexes.Length; i++)
                     {
-                        var index = collisionPage.Indexes[i];
-                        if (index.HeadNode.IsEmpty)
+                        var collectionIndex = collisionPage.Indexes[i];
+                        if (collectionIndex.HeadNode.IsEmpty)
                             continue;
 
-                        result &= _pager.ValidPage<IndexPage>(index.HeadNode.PageID);
+                        IndexPage indexPage;
+                        if (!GetValidPage(collectionIndex.HeadNode.PageID, out indexPage))
+                            return false;
 
-                        if (!result)
-                            return result;
+                        lProcessedPages.Add(collectionIndex.HeadNode.PageID);
 
-                        var headNode = _pager.GetPage<IndexPage>(index.HeadNode.PageID);
-
-                        //  loop through indices
-
-                        foreach (var node in headNode.Nodes.Values)
+                        for (;;)
                         {
-                            if (node.DataBlock.IsEmpty)
-                                continue;
+                            //if (indexPage.PrevPageID != uint.MaxValue)
+                            //   throw new Exception();
 
-                            result &= _pager.ValidPage<DataPage>(node.DataBlock.PageID);
 
-                            if (!result)
-                                return result;
-
-                            var dataPage = _pager.GetPage<DataPage>(node.DataBlock.PageID);
-                            foreach (var extend in dataPage.DataBlocks.Values)
+                            foreach (var indexNode in indexPage.Nodes.Values)
                             {
-                                if (extend.ExtendPageID == uint.MaxValue)
+                                // indexNode.NextNode / PrevNode
+
+                                // 
+
+                                if (indexNode.DataBlock.IsEmpty)
                                     continue;
 
-                                result &= _pager.ValidPage<ExtendPage>(extend.ExtendPageID);
+                                DataPage dataPage;
+                                if (!GetValidPage(indexNode.DataBlock.PageID, out dataPage))
+                                    return false;
 
-                                if (!result)
-                                    return result;
+                                lProcessedPages.Add(indexNode.DataBlock.PageID);
+
+                                foreach (var extend in dataPage.DataBlocks.Values)
+                                {
+                                    if (extend.ExtendPageID == uint.MaxValue)
+                                        continue;
+
+                                    if (!_pager.ValidPage<ExtendPage>(extend.ExtendPageID))
+                                        return false;
+
+                                    lProcessedPages.Add(extend.ExtendPageID);
+                                }
+                            }
+
+                            if (indexPage.NextPageID == uint.MaxValue)
+                                break;
+
+                            {
+                                uint nextPageID = indexPage.NextPageID;
+
+                                if (!GetValidPage(nextPageID, out indexPage))
+                                    return false;
+
+                                lProcessedPages.Add(nextPageID);
                             }
                         }
                     }
@@ -73,5 +95,26 @@ namespace LiteDB
 
             return result;
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="pageID"></param>
+        /// <param name="page"></param>
+        /// <returns></returns>
+        private bool GetValidPage<T>(uint pageID, out T page) 
+            where T : BasePage
+        {
+            bool result = _pager.ValidPage<T>(pageID);
+
+            if (result)
+                page = _pager.GetPage<T>(pageID);
+            else
+                page = null;
+
+            return result;
+        }
+
     }
 }
