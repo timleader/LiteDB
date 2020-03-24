@@ -126,8 +126,18 @@ namespace LiteDB
             // initialize all services
             this.InitializeServices();
 
-            // try recovery if has journal file
-            _trans.Recovery();
+            try
+            {
+                // try recovery if has journal file
+                _trans.Recovery();
+            }
+            catch (Exception ex)
+            {
+                _log.Write(Logger.ERROR, "exception throw while trying to run recovery '{0}'", ex.Message);
+
+                //  Something is fucked in the journal file, so lets delete it
+                _disk.ClearJournal();
+            }
         }
 
         /// <summary>
