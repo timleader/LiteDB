@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 
 namespace LiteDB
 {
@@ -10,58 +11,56 @@ namespace LiteDB
         public bool IntegrityCheck()
         {
             bool result = true;
+
             try
             {
-                result &= _pager.ValidPage<HeaderPage>(0);
-
-                if (!result)
-                    return result;
-
-                var headerPage = _pager.GetPage<HeaderPage>(0);
+                HeaderPage headerPage;
+                if (!GetValidPage(0, out headerPage))
+                    return false;
+                
                 foreach (var pageID in headerPage.CollectionPages.Values)
                 {
-                    result &= _pager.ValidPage<CollectionPage>(pageID);
-
-                    if (!result)
-                        return result;
-
-                    var collisionPage = _pager.GetPage<CollectionPage>(pageID);
+                    CollectionPage collisionPage;
+                    if (!GetValidPage(pageID, out collisionPage))
+                        return false;
+                    
                     for (var i = 0; i < collisionPage.Indexes.Length; i++)
                     {
-                        var index = collisionPage.Indexes[i];
-                        if (index.HeadNode.IsEmpty)
+                        var collectionIndex = collisionPage.Indexes[i];
+                        if (collectionIndex.HeadNode.IsEmpty)
                             continue;
 
-                        result &= _pager.ValidPage<IndexPage>(index.HeadNode.PageID);
-
-                        if (!result)
-                            return result;
-
-                        var headNode = _pager.GetPage<IndexPage>(index.HeadNode.PageID);
-
-                        //  loop through indices
-
-                        foreach (var node in headNode.Nodes.Values)
+                        IndexPage indexPage;
+                        if (!GetValidPage(collectionIndex.HeadNode.PageID, out indexPage))
+                            return false;
+                        
+                        var indexNode = indexPage.Nodes[0];
+                        
+                        while (!indexNode.NextPrev(0, 1).IsEmpty)
                         {
-                            if (node.DataBlock.IsEmpty)
-                                continue;
+                            if (!GetValidPage(indexNode.NextPrev(0, 1).PageID, out indexPage))
+                                return false;
+                            
+                            indexNode = indexPage.Nodes[indexNode.NextPrev(0, 1).Index];
 
-                            result &= _pager.ValidPage<DataPage>(node.DataBlock.PageID);
-
-                            if (!result)
-                                return result;
-
-                            var dataPage = _pager.GetPage<DataPage>(node.DataBlock.PageID);
-                            foreach (var extend in dataPage.DataBlocks.Values)
+                            if (!indexNode.DataBlock.IsEmpty)
                             {
-                                if (extend.ExtendPageID == uint.MaxValue)
-                                    continue;
+                                DataPage dataPage;
+                                if (!GetValidPage(indexNode.DataBlock.PageID, out dataPage))
+                                    return false;
+                                
+                                foreach (var extend in dataPage.DataBlocks.Values)
+                                {
+                                    if (extend.ExtendPageID == uint.MaxValue)
+                                        continue;
 
-                                result &= _pager.ValidPage<ExtendPage>(extend.ExtendPageID);
-
-                                if (!result)
-                                    return result;
+                                    if (!_pager.ValidPage<ExtendPage>(extend.ExtendPageID))
+                                        return false;
+                                }
                             }
+
+                            if (indexNode.IsHeadTail(collectionIndex))
+                                break;
                         }
                     }
                 }
@@ -70,8 +69,29 @@ namespace LiteDB
             {
                 result = false;
             }
+            
+            return result;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="pageID"></param>
+        /// <param name="page"></param>
+        /// <returns></returns>
+        private bool GetValidPage<T>(uint pageID, out T page) 
+            where T : BasePage
+        {
+            bool result = _pager.ValidPage<T>(pageID);
+
+            if (result)
+                page = _pager.GetPage<T>(pageID);
+            else
+                page = null;
 
             return result;
         }
+
     }
 }
